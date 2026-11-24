@@ -42,6 +42,7 @@ struct SC::GlobalsTest : public SC::TestCase
         char           fixedBuffer[128];
         FixedAllocator fixedAllocator = {fixedBuffer, sizeof(fixedBuffer)};
         Globals        fixedGlobals   = {fixedAllocator};
+        // clang-format off
         auto probe = [&](const char* label)
         {
             fprintf(stderr, "%s before: data=%p size=%zu capacity=%zu\n", label,
@@ -64,6 +65,7 @@ struct SC::GlobalsTest : public SC::TestCase
         const bool defaultRejected = probe("default allocator");
         Globals::push(globalsType, *defaultGlobal);
         SC_TRY(defaultRejected);
+        // clang-format on
         return true;
     }
 
