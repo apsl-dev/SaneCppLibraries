@@ -3,6 +3,8 @@
 #include "Libraries/Containers/Vector.h"
 #include "Libraries/Containers/Algorithms/AlgorithmBubbleSort.h"
 #include "Libraries/Memory/Buffer.h"
+#include "Libraries/Memory/Globals.h"
+#include "Libraries/Memory/Memory.h"
 #include "Libraries/Memory/String.h"
 #include "Libraries/Strings/Console.h"
 #include "Libraries/Strings/StringView.h"
@@ -172,6 +174,57 @@ SC::VectorTest::VectorTest(SC::TestReport& report) : TestCase(report, "VectorTes
 
 void SC::VectorTest::basicTests()
 {
+    if (test_section("allocation failure preserves vector"))
+    {
+        struct FailingAllocator : MemoryAllocator
+        {
+            MemoryAllocator& backing;
+            bool fail = false;
+            explicit FailingAllocator(MemoryAllocator& allocator) : backing(allocator) {}
+            void* allocateImpl(const void* owner, size_t bytes, size_t alignment) override
+            {
+                return fail ? nullptr : backing.allocate(owner, bytes, alignment);
+            }
+            void* reallocateImpl(void* ptr, size_t bytes) override
+            {
+                return fail ? nullptr : backing.reallocate(ptr, bytes);
+            }
+            void releaseImpl(void* ptr) override { backing.release(ptr); }
+        };
+        FailingAllocator allocator(Globals::get(Globals::Global).allocator);
+        Globals globals(allocator);
+        Globals::push(Globals::Global, globals);
+        {
+            Vector<int> values;
+            allocator.fail = true;
+            SC_TEST_EXPECT(not values.push_back(42));
+            SC_TEST_EXPECT(values.isEmpty());
+            allocator.fail = false;
+            SC_TEST_EXPECT(values.reserve(8));
+            SC_TEST_EXPECT(values.push_back(42));
+            auto* const data = values.data();
+            const auto capacity = values.capacity();
+            allocator.fail = true;
+            SC_TEST_EXPECT(not values.reserve(capacity + 1));
+            SC_TEST_EXPECT(values.data() == data);
+            SC_TEST_EXPECT(values.capacity() == capacity);
+            SC_TEST_EXPECT(values.size() == 1);
+            if (values.data() == data)
+            {
+                SC_TEST_EXPECT(values[0] == 42);
+                SC_TEST_EXPECT(not values.shrink_to_fit());
+                SC_TEST_EXPECT(values.data() == data);
+                SC_TEST_EXPECT(values.capacity() == capacity);
+                SC_TEST_EXPECT(values.size() == 1);
+                if (values.data() == data)
+                {
+                    SC_TEST_EXPECT(values[0] == 42);
+                }
+            }
+            allocator.fail = false;
+        }
+        Globals::pop(Globals::Global);
+    }
     if (test_section("remove"))
     {
         Vector<String> strings;
