@@ -179,7 +179,7 @@ void SC::VectorTest::basicTests()
         struct FailingAllocator : MemoryAllocator
         {
             MemoryAllocator& backing;
-            bool fail = false;
+            bool             fail = false;
             explicit FailingAllocator(MemoryAllocator& allocator) : backing(allocator) {}
             void* allocateImpl(const void* owner, size_t bytes, size_t alignment) override
             {
@@ -192,7 +192,7 @@ void SC::VectorTest::basicTests()
             void releaseImpl(void* ptr) override { backing.release(ptr); }
         };
         FailingAllocator allocator(Globals::get(Globals::Global).allocator);
-        Globals globals(allocator);
+        Globals          globals(allocator);
         Globals::push(Globals::Global, globals);
         {
             Vector<int> values;
@@ -204,9 +204,9 @@ void SC::VectorTest::basicTests()
             allocator.fail = false;
             SC_TEST_EXPECT(values.reserve(8));
             SC_TEST_EXPECT(values.push_back(42));
-            auto* const data = values.data();
-            const auto capacity = values.capacity();
-            allocator.fail = true;
+            auto* const data     = values.data();
+            const auto  capacity = values.capacity();
+            allocator.fail       = true;
             SC_TEST_EXPECT(not values.reserve(capacity + 1));
             SC_TEST_EXPECT(values.data() == data);
             SC_TEST_EXPECT(values.capacity() == capacity);
@@ -234,7 +234,7 @@ void SC::VectorTest::basicTests()
             SC_TEST_EXPECT(values.push_back(1));
             SC_TEST_EXPECT(values.push_back(2));
             auto* const data = values.data();
-            allocator.fail = true;
+            allocator.fail   = true;
             SC_TEST_EXPECT(not values.push_back(3));
             SC_TEST_EXPECT(values.data() == data);
             SC_TEST_EXPECT(values.isInline());
@@ -258,9 +258,9 @@ void SC::VectorTest::basicTests()
             Vector<Item> values;
             SC_TEST_EXPECT(values.reserve(8));
             SC_TEST_EXPECT(values.push_back(Item{42}));
-            auto* const data = values.data();
-            const auto capacity = values.capacity();
-            allocator.fail = true;
+            auto* const data     = values.data();
+            const auto  capacity = values.capacity();
+            allocator.fail       = true;
             SC_TEST_EXPECT(not values.reserve(capacity + 1));
             SC_TEST_EXPECT(values.data() == data);
             SC_TEST_EXPECT(values.capacity() == capacity);
