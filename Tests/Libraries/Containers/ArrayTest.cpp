@@ -22,6 +22,24 @@ struct SC::ArrayTest : public SC::TestCase
         using namespace SC;
 
         const StringView testString("Ciao");
+        if (test_section("capacity exhaustion preserves array"))
+        {
+            Array<int, 2> values;
+            SC_TEST_EXPECT(values.push_back(1));
+            SC_TEST_EXPECT(values.push_back(2));
+            auto* const data = values.data();
+            SC_TEST_EXPECT(not values.push_back(3));
+            SC_TEST_EXPECT(values.data() == data);
+            SC_TEST_EXPECT(values.capacity() == 2);
+            SC_TEST_EXPECT(values.size() == 2);
+            if (values.data() == data)
+            {
+                SC_TEST_EXPECT(values[0] == 1 and values[1] == 2);
+                SC_TEST_EXPECT(values.pop_back());
+                SC_TEST_EXPECT(values.push_back(3));
+                SC_TEST_EXPECT(values[0] == 1 and values[1] == 3);
+            }
+        }
         if (test_section("basic"))
         {
             Array<String, 2> strings;

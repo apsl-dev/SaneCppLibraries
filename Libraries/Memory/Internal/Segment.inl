@@ -63,7 +63,10 @@ struct SC::Segment<VTable>::Internal
                 }
             }
         }
-        segment.header.capacityBytes = static_cast<uint32_t>(capacityBytes);
+        if (newData != nullptr)
+        {
+            segment.header.capacityBytes = static_cast<uint32_t>(capacityBytes);
+        }
         return static_cast<T*>(newData);
     }
 
@@ -204,11 +207,11 @@ bool SC::Segment<VTable>::shrink_to_fit() noexcept
         else
         {
             T* newData = Internal::reallocate(*this, VTable::header.sizeBytes);
-            VTable::setData(newData);
-            if (VTable::header.sizeBytes > 0 and newData == nullptr)
+            if (newData == nullptr)
             {
                 return false;
             }
+            VTable::setData(newData);
         }
     }
     return true;
@@ -293,11 +296,11 @@ bool SC::Segment<VTable>::reserve(size_t capacity) noexcept
     const bool mustAlloc = VTable::header.capacityBytes == 0 or wasInline;
     T*         newData   = mustAlloc ? Internal::allocate(*this, capacityBytes, wasInline ? this : nullptr)
                                      : Internal::reallocate(*this, capacityBytes);
-    VTable::setData(newData);
     if (newData == nullptr)
     {
         return false;
     }
+    VTable::setData(newData);
     if (wasInline and VTable::header.sizeBytes > 0)
     {
         VTable::template moveConstruct<T>({newData, size()}, VTable::getInlineData());
