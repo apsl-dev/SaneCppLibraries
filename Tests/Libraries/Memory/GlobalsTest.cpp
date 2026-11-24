@@ -5,6 +5,7 @@
 #include "Libraries/Memory/VirtualMemory.h"
 #include "Libraries/Testing/Testing.h"
 #include "Libraries/Threading/Threading.h"
+#include <stdio.h>
 namespace SC
 {
 struct GlobalsTest;
@@ -41,17 +42,28 @@ struct SC::GlobalsTest : public SC::TestCase
         char           fixedBuffer[128];
         FixedAllocator fixedAllocator = {fixedBuffer, sizeof(fixedBuffer)};
         Globals        fixedGlobals   = {fixedAllocator};
+        auto probe = [&](const char* label)
+        {
+            fprintf(stderr, "%s before: data=%p size=%zu capacity=%zu\n", label,
+                    static_cast<void*>(buffer2.data()), buffer2.size(), buffer2.capacity());
+            const bool ok = appendBuffer(buffer2, "FAILURE");
+            fprintf(stderr, "%s after: ok=%d data=%p size=%zu capacity=%zu\n", label, int(ok),
+                    static_cast<void*>(buffer2.data()), buffer2.size(), buffer2.capacity());
+            return not ok;
+        };
         Globals::push(globalsType, fixedGlobals);
-        SC_TRY(not appendBuffer(buffer2, "FAILURE")); // MUST fail
+        const bool fixedRejected = probe("foreign fixed allocator");
         Globals::pop(globalsType);
+        SC_TRY(fixedRejected);
 
         // Let's now try to restore the "default allocator" (using malloc)
         // This allocator also keeps track of all of its allocations and it will refuse
         // to extend this buffer because of the "owner" parameter memory address not
         // belonging to any of the allocations it knows have been produced by itself.
         Globals* defaultGlobal = Globals::pop(globalsType);
-        SC_TRY(not appendBuffer(buffer2, "FAILURE")); // MUST fail
+        const bool defaultRejected = probe("default allocator");
         Globals::push(globalsType, *defaultGlobal);
+        SC_TRY(defaultRejected);
         return true;
     }
 
