@@ -199,6 +199,8 @@ void SC::VectorTest::basicTests()
             allocator.fail = true;
             SC_TEST_EXPECT(not values.push_back(42));
             SC_TEST_EXPECT(values.isEmpty());
+            SC_TEST_EXPECT(values.data() == nullptr);
+            SC_TEST_EXPECT(values.capacity() == 0);
             allocator.fail = false;
             SC_TEST_EXPECT(values.reserve(8));
             SC_TEST_EXPECT(values.push_back(42));
@@ -219,9 +221,57 @@ void SC::VectorTest::basicTests()
                 if (values.data() == data)
                 {
                     SC_TEST_EXPECT(values[0] == 42);
+                    allocator.fail = false;
+                    SC_TEST_EXPECT(values.reserve(capacity + 1));
+                    SC_TEST_EXPECT(values.push_back(43));
+                    SC_TEST_EXPECT(values[0] == 42 and values[1] == 43);
                 }
             }
             allocator.fail = false;
+        }
+        {
+            SmallVector<int, 2> values;
+            SC_TEST_EXPECT(values.push_back(1));
+            SC_TEST_EXPECT(values.push_back(2));
+            auto* const data = values.data();
+            allocator.fail = true;
+            SC_TEST_EXPECT(not values.push_back(3));
+            SC_TEST_EXPECT(values.data() == data);
+            SC_TEST_EXPECT(values.isInline());
+            SC_TEST_EXPECT(values.capacity() == 2);
+            SC_TEST_EXPECT(values.size() == 2);
+            allocator.fail = false;
+            if (values.data() == data)
+            {
+                SC_TEST_EXPECT(values[0] == 1 and values[1] == 2);
+                SC_TEST_EXPECT(values.push_back(3));
+                SC_TEST_EXPECT(not values.isInline());
+                SC_TEST_EXPECT(values[0] == 1 and values[1] == 2 and values[2] == 3);
+            }
+        }
+        {
+            struct Item
+            {
+                int value = 0;
+                ~Item() {}
+            };
+            Vector<Item> values;
+            SC_TEST_EXPECT(values.reserve(8));
+            SC_TEST_EXPECT(values.push_back(Item{42}));
+            auto* const data = values.data();
+            const auto capacity = values.capacity();
+            allocator.fail = true;
+            SC_TEST_EXPECT(not values.reserve(capacity + 1));
+            SC_TEST_EXPECT(values.data() == data);
+            SC_TEST_EXPECT(values.capacity() == capacity);
+            SC_TEST_EXPECT(values.size() == 1);
+            allocator.fail = false;
+            if (values.data() == data)
+            {
+                SC_TEST_EXPECT(values[0].value == 42);
+                SC_TEST_EXPECT(values.reserve(capacity + 1));
+                SC_TEST_EXPECT(values[0].value == 42);
+            }
         }
         Globals::pop(Globals::Global);
     }
